@@ -7,7 +7,7 @@
 bl_info = {
     "name": "Tri-lighting",
     "author": "Daniel Schalla",
-    "version": (0, 1, 4),
+    "version": (0, 1, 5),
     "blender": (2, 80, 0),
     "location": "View3D > Add > Lights",
     "description": "Add 3 Point Lighting to Selected / Active Object",
@@ -20,15 +20,15 @@ bl_info = {
 import bpy
 from bpy.types import Operator
 from bpy.props import (
-        EnumProperty,
-        FloatProperty,
-        IntProperty,
-        )
+    EnumProperty,
+    FloatProperty,
+    IntProperty,
+)
 from math import (
-        sin, cos,
-        radians,
-        sqrt,
-        )
+    sin, cos,
+    radians,
+    sqrt,
+)
 
 
 class OBJECT_OT_TriLighting(Operator):
@@ -99,6 +99,34 @@ class OBJECT_OT_TriLighting(Operator):
             default="AREA"
             )
 
+    # Shape and Size Properties for the lights
+    Light_Shape_List = [
+            ('SQUARE', "Square", "Square Light"),
+            ('RECTANGLE', "Rectangle", "Rectangular Light"),
+            ('DISK', "Disk", "Disk Light"),
+            ('ELLIPSE', "Ellipse", "Elliptical Light")
+            ]
+    key_light_shape: EnumProperty(
+            name="Key Light Shape",
+            items=Light_Shape_List,
+            default='SQUARE'
+            )
+    secondary_light_shape: EnumProperty(
+            name="Fill + Back Light Shape",
+            items=Light_Shape_List,
+            default='SQUARE'
+            )
+    key_light_size: FloatProperty(
+            name="Key Light Size",
+            default=0.25,
+            min=0.1
+            )
+    secondary_light_size: FloatProperty(
+            name="Fill + Back Light Size",
+            default=0.25,
+            min=0.1
+            )
+
     @classmethod
     def poll(cls, context):
         return context.active_object is not None
@@ -127,6 +155,18 @@ class OBJECT_OT_TriLighting(Operator):
         col.prop(self, "primarytype", text="")
         col.label(text="Fill + Back Type:")
         col.prop(self, "secondarytype", text="")
+
+        # Shape and Size for Key Light
+        col.label(text="Key Light Shape and Size:")
+        if self.primarytype == 'AREA':
+            col.prop(self, "key_light_shape")
+            col.prop(self, "key_light_size")
+        
+        # Shape and Size for Fill + Back Light
+        col.label(text="Fill + Back Light Shape and Size:")
+        if self.secondarytype == 'AREA':
+            col.prop(self, "secondary_light_shape")
+            col.prop(self, "secondary_light_size")
 
 
     def execute(self, context):
@@ -196,6 +236,10 @@ class OBJECT_OT_TriLighting(Operator):
             backData = bpy.data.lights.new(name="TriLamp-Back", type=self.secondarytype)
             backData.energy = backEnergy
 
+            if self.secondarytype == 'AREA':
+                backData.shape = self.secondary_light_shape
+                backData.size = self.secondary_light_size
+
             backLamp = bpy.data.objects.new(name="TriLamp-Back", object_data=backData)
             collection.objects.link(backLamp)
             backLamp.location = (backx, backy, self.height)
@@ -218,6 +262,9 @@ class OBJECT_OT_TriLighting(Operator):
 
             rightData = bpy.data.lights.new(name="TriLamp-Fill", type=self.secondarytype)
             rightData.energy = fillEnergy
+            if self.secondarytype == 'AREA':
+                rightData.shape = self.secondary_light_shape
+                rightData.size = self.secondary_light_size
             rightLamp = bpy.data.objects.new(name="TriLamp-Fill", object_data=rightData)
             collection.objects.link(rightLamp)
             rightLamp.location = (rightx, righty, self.height)
@@ -237,6 +284,9 @@ class OBJECT_OT_TriLighting(Operator):
 
             leftData = bpy.data.lights.new(name="TriLamp-Key", type=self.primarytype)
             leftData.energy = keyEnergy
+            if self.primarytype == 'AREA':
+                leftData.shape = self.key_light_shape
+                leftData.size = self.key_light_size
 
             leftLamp = bpy.data.objects.new(name="TriLamp-Key", object_data=leftData)
             collection.objects.link(leftLamp)
